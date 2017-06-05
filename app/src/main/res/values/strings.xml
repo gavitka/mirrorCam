@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">My First App</string>
+    <string name="open_camera_1">Camera 1</string>
+    <string name="open_camera_2">Camera 2</string>
 </resources>
