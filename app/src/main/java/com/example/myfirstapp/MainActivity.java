@@ -1,6 +1,7 @@
 package com.example.myfirstapp;
 
 import android.Manifest;
+import android.graphics.Matrix;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
@@ -37,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private Button mButtonOpenCamera2 = null;
     private TextureView mImageView = null;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,6 +46,13 @@ public class MainActivity extends AppCompatActivity {
 
         mCameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         mImageView = (TextureView) findViewById(R.id.image_view);
+
+        //Matrix matrix = mImageView.getMatrix();
+        //matrix.preScale(-1.0f,1.0f);
+        //matrix.postScale(-1.0f,1.0f);
+        //mImageView.setTransform(matrix);
+        mImageView.setScaleX(-1.0f);
+        //Log.i(LOG_TAG, "Matrix:" + matrix.toString());
 
         try {
             // Получения списка камер в устрйстве
