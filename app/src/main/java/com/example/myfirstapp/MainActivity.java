@@ -26,6 +26,8 @@ import android.widget.Button;
 
 import java.util.Arrays;
 
+import static android.R.attr.id;
+
 public class MainActivity extends AppCompatActivity {
 
     private CameraManager mCameraManager    = null;
@@ -45,14 +47,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mCameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        mImageView = (TextureView) findViewById(R.id.image_view);
 
-        //Matrix matrix = mImageView.getMatrix();
-        //matrix.preScale(-1.0f,1.0f);
-        //matrix.postScale(-1.0f,1.0f);
-        //mImageView.setTransform(matrix);
+        mImageView = (TextureView) findViewById(R.id.image_view);
         mImageView.setScaleX(-1.0f);
-        //Log.i(LOG_TAG, "Matrix:" + matrix.toString());
 
         try {
             // Получения списка камер в устрйстве
@@ -68,37 +65,12 @@ public class MainActivity extends AppCompatActivity {
                 // выводим инормацию по камере
                 myCameras[id].viewFormatSize(ImageFormat.JPEG);
                 myCameras[id].setTextureView(mImageView);
+                Log.i(LOG_TAG,"Set texture");
             }
         } catch (CameraAccessException e) {
             Log.e(LOG_TAG,e.getMessage());
             e.printStackTrace();
         }
-
-        //requestPermissions(new String[]{Manifest.permission.CAMERA}, REQ_ACCESS_FINE_LOCATION);
-
-        mButtonOpenCamera1 = (Button) findViewById(R.id.btn_open_camera1);
-        mButtonOpenCamera2 = (Button) findViewById(R.id.btn_open_camera2);
-        mButtonOpenCamera1.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (myCameras[CAMERA2].isOpen()) myCameras[CAMERA2].closeCamera();
-                if (myCameras[CAMERA1] != null) {
-                    if (!myCameras[CAMERA1].isOpen()) {
-                        myCameras[CAMERA1].openCamera();
-                    }
-                }
-            }
-        });
-
-        mButtonOpenCamera2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (myCameras[CAMERA1].isOpen()) myCameras[CAMERA1].closeCamera();
-                if (myCameras[CAMERA2] != null) {
-                    if (!myCameras[CAMERA2].isOpen()) myCameras[CAMERA2].openCamera();
-                }
-            }
-        });
 
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.CAMERA)
@@ -110,9 +82,60 @@ public class MainActivity extends AppCompatActivity {
                         new String[]{Manifest.permission.CAMERA},
                         MY_PERMISSIONS_REQUEST_READ_CONTACTS);
             }
+        } else {
+            openCamera();
+        }
+
+//        mButtonOpenCamera1 = (Button) findViewById(R.id.btn_open_camera1);
+//        mButtonOpenCamera2 = (Button) findViewById(R.id.btn_open_camera2);
+//        mButtonOpenCamera1.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                if (myCameras[CAMERA2].isOpen()) myCameras[CAMERA2].closeCamera();
+//                if (myCameras[CAMERA1] != null) {
+//                    if (!myCameras[CAMERA1].isOpen()) {
+//                        myCameras[CAMERA1].openCamera();
+//                    }
+//                }
+//            }
+//        });
+//
+//        mButtonOpenCamera2.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                if (myCameras[CAMERA1].isOpen()) myCameras[CAMERA1].closeCamera();
+//                if (myCameras[CAMERA2] != null) {
+//                    if (!myCameras[CAMERA2].isOpen()) myCameras[CAMERA2].openCamera();
+//                }
+//            }
+//        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_READ_CONTACTS: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    openCamera();
+
+                } else {
+
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
         }
     }
 
+    private void openCamera() {
+        if (myCameras[CAMERA1] != null) {
+            myCameras[CAMERA1].openCamera();
+        }
+    }
 
 
 }

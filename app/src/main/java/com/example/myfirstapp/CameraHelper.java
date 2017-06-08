@@ -18,6 +18,8 @@ import android.view.TextureView;
 
 import java.util.Arrays;
 
+import static com.example.myfirstapp.MainActivity.LOG_TAG;
+
 /**
  * Created by Kheops on 6/5/2017.
  */
@@ -42,7 +44,7 @@ public class CameraHelper {
         try {
             mCameraManager.openCamera(mCameraID,mCameraCallback,null);
         } catch (CameraAccessException e) {
-            Log.e(MainActivity.LOG_TAG,e.getMessage());
+            Log.e(LOG_TAG,e.getMessage());
             //e.printStackTrace();
         }
     }
@@ -61,19 +63,19 @@ public class CameraHelper {
         public void onOpened(CameraDevice camera) {
             mCameraDevice = camera;
             createCameraPreviewSession();
-            Log.i(MainActivity.LOG_TAG, "Open camera  with id:"+mCameraDevice.getId());
+            Log.i(LOG_TAG, "Open camera  with id:"+mCameraDevice.getId());
         }
 
         @Override
         public void onDisconnected(CameraDevice camera) {
             mCameraDevice.close();
             mCameraDevice = null;
-            Log.i(MainActivity.LOG_TAG, "disconnect camera  with id:"+mCameraDevice.getId());
+            Log.i(LOG_TAG, "disconnect camera  with id:"+mCameraDevice.getId());
         }
 
         @Override
         public void onError(CameraDevice camera, int error) {
-            Log.i(MainActivity.LOG_TAG, "error! camera id:"+camera.getId()+" error:"+error);
+            Log.i(LOG_TAG, "error! camera id:"+camera.getId()+" error:"+error);
         }
     };
 
@@ -97,56 +99,73 @@ public class CameraHelper {
 
             if (sizesJPEG != null) {
                 for (Size item:sizesJPEG) {
-                    Log.i(MainActivity.LOG_TAG, "w:" + item.getWidth() + " h:" + item.getHeight());
+                    Log.i(LOG_TAG, "w:" + item.getWidth() + " h:" + item.getHeight());
                 }
             } else {
-                Log.e(MainActivity.LOG_TAG, "camera with id: "+mCameraID+" don`t support format: "+formatSize);
+                Log.e(LOG_TAG, "camera with id: "+mCameraID+" don`t support format: "+formatSize);
             }
 
         } catch (CameraAccessException e) {
-            Log.e(MainActivity.LOG_TAG,e.getMessage());
+            Log.e(LOG_TAG,e.getMessage());
             //e.printStackTrace();
         }
     }
 
     private void createCameraPreviewSession() {
 
-        SurfaceTexture texture = mTextureView.getSurfaceTexture();
-        texture.setDefaultBufferSize(1920,1080);
-        Surface surface = new Surface(texture);
+        mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+                texture.setDefaultBufferSize(1920, 1080);
+                Surface surface = new Surface(texture);
 
-        try {
-            final CaptureRequest.Builder builder =
-                    mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                try {
+                    final CaptureRequest.Builder builder =
+                            mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
-            builder.addTarget(surface);
+                    builder.addTarget(surface);
 
-            mCameraDevice.createCaptureSession(
-                    Arrays.asList(surface),
-                    new CameraCaptureSession.StateCallback() {
+                    mCameraDevice.createCaptureSession(
+                            Arrays.asList(surface),
+                            new CameraCaptureSession.StateCallback() {
 
-                        @Override
-                        public void onConfigured(CameraCaptureSession session) {
-                            mSession = session;
-                            try {
-                                mSession.setRepeatingRequest(builder.build(),null,null);
-                            } catch (CameraAccessException e) {
-                                e.printStackTrace();
-                            }
-                        }
+                                @Override
+                                public void onConfigured(CameraCaptureSession session) {
+                                    mSession = session;
+                                    try {
+                                        mSession.setRepeatingRequest(builder.build(), null, null);
+                                    } catch (CameraAccessException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
 
-                        @Override
-                        public void onConfigureFailed(CameraCaptureSession session) {
-                        }
+                                @Override
+                                public void onConfigureFailed(CameraCaptureSession session) {
+                                }
 
-                    },
-                    null
+                            },
+                            null
 
-            );
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+                    );
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+            }
 
+            @Override
+            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                return true;
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+            }
+
+        });
     }
 
     public void setTextureView(TextureView value) {
