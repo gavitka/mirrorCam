@@ -29,17 +29,18 @@ import java.util.Arrays;
 
 import static android.R.attr.id;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+    implements  ActivityCompat.OnRequestPermissionsResultCallback{
 
     private CameraManager mCameraManager    = null;
     static final String LOG_TAG = "ssibal";
-    private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 1;
+    private static final int REQUEST_CAM_PERMISSIONS = 1;
     private final int CAMERA1   = 0;
     private final int CAMERA2   = 1;
     private CameraHelper[] myCameras = null;
     private Button mButtonOpenCamera1 = null;
     private Button mButtonOpenCamera2 = null;
-    private AutoFitTextureView mImageView = null;
+    private com.example.myfirstapp.AutoFitTextureView mImageView = null;
 
 
     @Override
@@ -49,26 +50,19 @@ public class MainActivity extends AppCompatActivity {
 
         mCameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
 
-        mImageView = (AutoFitTextureView) findViewById(R.id.image_view);
+        mImageView = (com.example.myfirstapp.AutoFitTextureView) findViewById(R.id.image_view);
 
         try {
             // Получения списка камер в устрйстве
             String[] cameraList = mCameraManager.getCameraIdList();
             myCameras = new CameraHelper[cameraList.length];
             for (String cameraID : cameraList) {
-                Log.i(LOG_TAG, "cameraID: "+cameraID);
                 int id = Integer.parseInt(cameraID);
-                // создаем обработчик для камеры
                 myCameras[id] = new CameraHelper(mCameraManager,cameraID, this);
-
-                // выводим инормацию по камере
-                myCameras[id].viewFormatSize(ImageFormat.JPEG);
-                myCameras[id].setTextureView(mImageView);
-                Log.i(LOG_TAG,"Set texture");
             }
+            myCameras[CAMERA1].setTextureView(mImageView);
         } catch (CameraAccessException e) {
             Log.e(LOG_TAG,e.getMessage());
-            e.printStackTrace();
         }
 
         if (ContextCompat.checkSelfPermission(this,
@@ -79,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.CAMERA},
-                        MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+                        REQUEST_CAM_PERMISSIONS);
             }
         } else {
             openCamera();
@@ -89,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case MY_PERMISSIONS_REQUEST_READ_CONTACTS: {
+            case REQUEST_CAM_PERMISSIONS: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
@@ -105,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void openCamera() {
         if (myCameras[CAMERA1] != null) {
-            myCameras[CAMERA1].openCamera();
+            myCameras[CAMERA1].showCamera();
         }
     }
 
