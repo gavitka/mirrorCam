@@ -1,6 +1,7 @@
 package com.example.myfirstapp;
 
 import android.Manifest;
+import android.app.Activity;
 import android.graphics.Matrix;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -38,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private CameraHelper[] myCameras = null;
     private Button mButtonOpenCamera1 = null;
     private Button mButtonOpenCamera2 = null;
-    private TextureView mImageView = null;
+    private AutoFitTextureView mImageView = null;
 
 
     @Override
@@ -48,8 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
         mCameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
 
-        mImageView = (TextureView) findViewById(R.id.image_view);
-        mImageView.setScaleX(-1.0f);
+        mImageView = (AutoFitTextureView) findViewById(R.id.image_view);
 
         try {
             // Получения списка камер в устрйстве
@@ -58,9 +58,8 @@ public class MainActivity extends AppCompatActivity {
             for (String cameraID : cameraList) {
                 Log.i(LOG_TAG, "cameraID: "+cameraID);
                 int id = Integer.parseInt(cameraID);
-
                 // создаем обработчик для камеры
-                myCameras[id] = new CameraHelper(mCameraManager,cameraID);
+                myCameras[id] = new CameraHelper(mCameraManager,cameraID, this);
 
                 // выводим инормацию по камере
                 myCameras[id].viewFormatSize(ImageFormat.JPEG);
@@ -85,30 +84,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             openCamera();
         }
-
-//        mButtonOpenCamera1 = (Button) findViewById(R.id.btn_open_camera1);
-//        mButtonOpenCamera2 = (Button) findViewById(R.id.btn_open_camera2);
-//        mButtonOpenCamera1.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                if (myCameras[CAMERA2].isOpen()) myCameras[CAMERA2].closeCamera();
-//                if (myCameras[CAMERA1] != null) {
-//                    if (!myCameras[CAMERA1].isOpen()) {
-//                        myCameras[CAMERA1].openCamera();
-//                    }
-//                }
-//            }
-//        });
-//
-//        mButtonOpenCamera2.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                if (myCameras[CAMERA1].isOpen()) myCameras[CAMERA1].closeCamera();
-//                if (myCameras[CAMERA2] != null) {
-//                    if (!myCameras[CAMERA2].isOpen()) myCameras[CAMERA2].openCamera();
-//                }
-//            }
-//        });
     }
 
     @Override
@@ -125,9 +100,6 @@ public class MainActivity extends AppCompatActivity {
                 }
                 return;
             }
-
-            // other 'case' lines to check for other
-            // permissions this app might request
         }
     }
 

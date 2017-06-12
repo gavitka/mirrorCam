@@ -1,7 +1,10 @@
 package com.example.myfirstapp;
 
 import android.Manifest;
+import android.app.Activity;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -10,14 +13,21 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.MediaRecorder;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
+import static android.content.ContentValues.TAG;
+import static android.os.Build.VERSION_CODES.M;
 import static com.example.myfirstapp.MainActivity.LOG_TAG;
 
 /**
@@ -30,7 +40,11 @@ public class CameraHelper {
 
     private CameraDevice mCameraDevice  = null;
     private CameraCaptureSession mSession;
-    private TextureView mTextureView;
+    private AutoFitTextureView mTextureView;
+    private Size mPreviewSize;
+    private Size mVideoSize;
+    private StreamConfigurationMap map;
+    private Activity mActivity;
 
     public boolean isOpen() {
         if (mCameraDevice == null) {
@@ -79,9 +93,10 @@ public class CameraHelper {
         }
     };
 
-    public CameraHelper(@NonNull CameraManager cameraManager, @NonNull String cameraID) {
+    public CameraHelper(@NonNull CameraManager cameraManager, @NonNull String cameraID, Activity activity) {
         mCameraManager  = cameraManager;
         mCameraID       = cameraID;
+        mActivity       = activity;
     }
 
     public void viewFormatSize(int formatSize) {
@@ -91,11 +106,11 @@ public class CameraHelper {
             cc = mCameraManager.getCameraCharacteristics(mCameraID);
 
             // Получения списка выходного формата, который поддерживает камера
-            StreamConfigurationMap configurationMap =
+            map =
                     cc.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
             // Получения списка разрешений которые поддерживаются для формата jpeg
-            Size[] sizesJPEG = configurationMap.getOutputSizes(ImageFormat.JPEG);
+            Size[] sizesJPEG = map.getOutputSizes(ImageFormat.JPEG);
 
             if (sizesJPEG != null) {
                 for (Size item:sizesJPEG) {
@@ -116,7 +131,25 @@ public class CameraHelper {
         mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-                texture.setDefaultBufferSize(1920, 1080);
+                Log.i(LOG_TAG, "width: " + width);
+                Log.i(LOG_TAG, "height: " + height);
+
+                mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+                        width, height, mVideoSize);
+
+                texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+//                RectF viewRect = new RectF(0, 0, 1080, 1920);
+//                RectF bufferRect = new RectF(0, 0, 480, 640);
+
+//                Matrix matrix = new Matrix();
+//                matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+
+//                mTextureView.setTransform(matrix);
+                //mTextureView.setScaleX(-1.0f);
+
+                //texture.setDefaultBufferSize(640, 480);
                 Surface surface = new Surface(texture);
 
                 try {
@@ -145,11 +178,11 @@ public class CameraHelper {
 
                             },
                             null
-
                     );
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
                 }
+                configureTransform(width, height);
             }
 
             @Override
@@ -159,6 +192,7 @@ public class CameraHelper {
 
             @Override
             public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+                configureTransform(width, height);
             }
 
             @Override
@@ -168,8 +202,73 @@ public class CameraHelper {
         });
     }
 
-    public void setTextureView(TextureView value) {
+    public void setTextureView(AutoFitTextureView value) {
         mTextureView = value;
+    }
+
+    private static Size chooseVideoSize(Size[] choices) {
+        for (Size size : choices) {
+            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
+                return size;
+            }
+        }
+        Log.e(TAG, "Couldn't find any suitable video size");
+        return choices[choices.length - 1];
+    }
+
+    private static Size chooseOptimalSize(Size[] choices, int width, int height, Size aspectRatio) {
+        // Collect the supported resolutions that are at least as big as the preview Surface
+        List<Size> bigEnough = new ArrayList<>();
+        int w = aspectRatio.getWidth();
+        int h = aspectRatio.getHeight();
+        for (Size option : choices) {
+            if (option.getHeight() == option.getWidth() * h / w &&
+                    option.getWidth() >= width && option.getHeight() >= height) {
+                bigEnough.add(option);
+            }
+        }
+
+        // Pick the smallest of those, assuming we found any
+        if (bigEnough.size() > 0) {
+            return Collections.min(bigEnough, new CompareSizesByArea());
+        } else {
+            Log.e(TAG, "Couldn't find any suitable preview size");
+            return choices[0];
+        }
+    }
+
+    static class CompareSizesByArea implements Comparator<Size> {
+
+        @Override
+        public int compare(Size lhs, Size rhs) {
+            // We cast here to ensure the multiplications won't overflow
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
+                    (long) rhs.getWidth() * rhs.getHeight());
+        }
+    }
+
+    private void configureTransform(int viewWidth, int viewHeight) {
+        if (null == mTextureView || null == mPreviewSize || null == mActivity) {
+            return;
+        }
+        int rotation = mActivity.getWindowManager().getDefaultDisplay().getRotation();
+        Matrix matrix = new Matrix();
+        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
+        Log.i(LOG_TAG, " view" +  viewWidth + " " + viewHeight);
+        RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
+        Log.i(LOG_TAG, " bufferRect" +  mPreviewSize.getHeight() + " " + mPreviewSize.getWidth());
+        float centerX = viewRect.centerX();
+        float centerY = viewRect.centerY();
+        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.CENTER);
+            float scale = Math.max(
+                    (float) viewHeight / mPreviewSize.getHeight(),
+                    (float) viewWidth / mPreviewSize.getWidth());
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+        }
+        mTextureView.setTransform(matrix);
     }
 
 }
